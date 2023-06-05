@@ -17,25 +17,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Devices
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.Observer
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import org.altbeacon.beacon.Beacon
 import org.altbeacon.beacon.BeaconManager
+import org.altbeacon.beacon.BeaconParser
 import org.altbeacon.beacon.Region
-import rocks.zantsu.buscabeacon.R
-import rocks.zantsu.buscabeacon.permissions.BeaconScanPermissionsActivity
-import rocks.zantsu.buscabeacon.permissions.PermissionsActivity
 import rocks.zantsu.buscabeacon.presentation.theme.BuscaBeaconTheme
 
 const val TAG: String = "MainAPP"
 
 class MainActivity : ComponentActivity() {
+    private val calorText = mutableStateOf("Buscando");
+    private val lastReading = mutableStateOf(50.0);
+    private val numOfReadings = mutableStateOf(10);
+    private val lastTendence = mutableStateOf("");
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState);
@@ -49,15 +50,13 @@ class MainActivity : ComponentActivity() {
 //        intent.putExtra("key", value);
 //        startActivity(intent);
 
-        val beaconManager =  BeaconManager.getInstanceForApplication(this);
-        val region = Region("all-beacons-region", null, null, null);
+        val beaconManager = BeaconManager.getInstanceForApplication(this);
+        beaconManager.beaconParsers.add(BeaconParser().setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24")); //iBeacon
+        val region = Region("all-beacons-region", null, null, null)
         // Set up a Live Data observer so this Activity can get ranging callbacks
         // observer will be called each time the monitored regionState changes (inside vs. outside region)
         beaconManager.getRegionViewModel(region).rangedBeacons.observe(this, rangingObserver);
         beaconManager.startRangingBeacons(region);
-
-        val beaconThread = BeaconThread();
-        beaconThread.start()
     }
 
     override fun onResume() {
@@ -73,9 +72,33 @@ class MainActivity : ComponentActivity() {
         // The code needed to get these permissions has become increasingly complex, so it is in
         // its own file so as not to clutter this file focussed on how to use the library.
 
-            val intent = Intent(this, BeaconScanPermissionsActivity::class.java)
-            intent.putExtra("backgroundAccessRequested", true)
-            startActivity(intent)
+//            val intent = Intent(this, BeaconScanPermissionsActivity::class.java)
+//            intent.putExtra("backgroundAccessRequested", true)
+//            startActivity(intent)
+    }
+
+    //    @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
+    @Composable
+    fun WearApp(greetingName: String) {
+        val editableText by calorText
+        BuscaBeaconTheme {
+            /* If you have enough items in your list, use [ScalingLazyColumn] which is an optimized
+             * version of LazyColumn for wear devices with some added features. For more information,
+             * see d.android.com/wear/compose.
+             */
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colors.background),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colors.primary,
+                    text = editableText
+                )
+            }
         }
     }
 
@@ -83,56 +106,42 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "Ranged: ${beacons.count()} beacons");
         for (beacon: Beacon in beacons) {
             Log.d(TAG, "$beacon about ${beacon.distance} meters away");
+            var tendencia = lastTendence.value;
+            if(numOfReadings.value > 5){
+                lastReading.value = beacon.distance;
+                if(lastReading.value > beacon.distance) tendencia = "Esfriando"
+                else tendencia = "Esquentando";
+                lastTendence.value = tendencia;
+                numOfReadings.value = 0;
+            }
+//            "🥵🤯🙂🥶"
+            var emoji = "\uD83E\uDD76"; //Emoji gelado.
+            if(beacon.distance < 5){
+                emoji = "\uD83D\uDE42" //Emoji Feliz
+            }
+            if(beacon.distance < 3){
+                emoji = "\uD83E\uDD75" //Emoji com Calor
+            }
+            if(beacon.distance < 1){
+                emoji = "\uD83E\uDD2F" //Emoji Explodindo
+            }
+            calorText.value = "${tendencia}\n${emoji}\n${beacon.distance}m";
+            numOfReadings.value++;
+        }
     }
 }
 
-class BeaconThread: Thread() {
+class BeaconThread : Thread() {
     public override fun run() {
-        while(true){
-            Log.d(TAG,"${Thread.currentThread()} is running");
+        while (true) {
+            Log.d(TAG, "${Thread.currentThread()} is running");
             Thread.sleep(100);
         }
     }
 }
 
-@Composable
-fun WearApp(greetingName: String) {
-    BuscaBeaconTheme {
-        /* If you have enough items in your list, use [ScalingLazyColumn] which is an optimized
-         * version of LazyColumn for wear devices with some added features. For more information,
-         * see d.android.com/wear/compose.
-         */
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colors.background),
-            verticalArrangement = Arrangement.Center
-        ){
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colors.primary,
-                text="Frio"
-            )
-        }
-//        {
-//            Greeting(greetingName = greetingName)
-//        }
-    }
-}
-
-@Composable
-fun Greeting(greetingName: String) {
-    Text(
-        modifier = Modifier.fillMaxWidth(),
-        textAlign = TextAlign.Center,
-        color = MaterialTheme.colors.primary,
-        text = stringResource(R.string.hello_world, greetingName)
-    )
-}
-
-@Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
-@Composable
-fun DefaultPreview() {
-    WearApp("Preview Android")
-}
+//@Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
+//@Composable
+//fun DefaultPreview() {
+//    WearApp("Preview Android")
+//}

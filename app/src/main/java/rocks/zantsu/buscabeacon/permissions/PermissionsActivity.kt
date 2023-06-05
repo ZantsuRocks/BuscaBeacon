@@ -2,6 +2,7 @@ package rocks.zantsu.buscabeacon.permissions
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.pm.PackageManager
@@ -24,18 +25,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.content.ContextCompat
 import androidx.core.view.setPadding
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
-import rocks.zantsu.buscabeacon.presentation.WearApp
+//import rocks.zantsu.buscabeacon.presentation.WearApp
 import rocks.zantsu.buscabeacon.presentation.theme.BuscaBeaconTheme
 
-open class PermissionsActivity: ComponentActivity() {
+open class PermissionsActivity : ComponentActivity() {
 
-    val requestPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+    val requestPermissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             // Handle Permission granted/rejected
             permissions.entries.forEach {
                 val permissionName = it.key
@@ -66,14 +69,21 @@ class PermissionsHelper(val context: Context) {
     // Manifest.permission.BLUETOOTH_CONNECT
     // Manifest.permission.BLUETOOTH_SCAN
     fun isPermissionGranted(permissionString: String): Boolean {
-        return (ContextCompat.checkSelfPermission(context, permissionString) == PackageManager.PERMISSION_GRANTED)
+        return (ContextCompat.checkSelfPermission(
+            context,
+            permissionString
+        ) == PackageManager.PERMISSION_GRANTED)
     }
+
     fun setFirstTimeAskingPermission(permissionString: String, isFirstTime: Boolean) {
-        val sharedPreference = context.getSharedPreferences("org.altbeacon.permisisons",
+        val sharedPreference = context.getSharedPreferences(
+            "org.altbeacon.permisisons",
             ComponentActivity.MODE_PRIVATE
         )
-        sharedPreference.edit().putBoolean(permissionString,
-            isFirstTime).apply()
+        sharedPreference.edit().putBoolean(
+            permissionString,
+            isFirstTime
+        ).apply()
     }
 
     fun isFirstTimeAskingPermission(permissionString: String): Boolean {
@@ -86,6 +96,7 @@ class PermissionsHelper(val context: Context) {
             true
         )
     }
+
     fun beaconScanPermissionGroupsNeeded(backgroundAccessRequested: Boolean = false): List<Array<String>> {
         val permissions = ArrayList<Array<String>>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -103,7 +114,12 @@ class PermissionsHelper(val context: Context) {
             // Manifest.permission.BLUETOOTH_CONNECT is not absolutely required to do just scanning,
             // but it is required if you want to access some info from the scans like the device name
             // and the aditional cost of requsting this access is minimal, so we just request it
-            permissions.add(arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT))
+            permissions.add(
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                )
+            )
         }
         return permissions
     }
@@ -111,8 +127,7 @@ class PermissionsHelper(val context: Context) {
 }
 
 
-
-open class BeaconScanPermissionsActivity: PermissionsActivity()  {
+open class BeaconScanPermissionsActivity : PermissionsActivity() {
     lateinit var permissionGroups: List<Array<String>>
     var scale: Float = 1.0f
         get() {
@@ -129,14 +144,14 @@ open class BeaconScanPermissionsActivity: PermissionsActivity()  {
 //        layout.orientation = LinearLayout.VERTICAL
         val backgroundAccessRequested = intent.getBooleanExtra("backgroundAccessRequested", true)
         val title = intent.getStringExtra("title") ?: "Permissions Needed"
-        val message = intent.getStringExtra("message") ?: "In order to scan for beacons, this app requrires the following permissions from the operating system.  Please tap each button to grant each required permission."
-        val continueButtonTitle = intent.getStringExtra("continueButtonTitle") ?: "Continue"
-        val permissionButtonTitles = intent.getBundleExtra("permissionBundleTitles") ?: getDefaultPermissionTitlesBundle()
+        val message = intent.getStringExtra("message") ?: "Dar permissões!"
+        val continueButtonTitle = intent.getStringExtra("continueButtonTitle") ?: "Continuar"
+//        val permissionButtonTitles = intent.getBundleExtra("permissionBundleTitles") ?: getDefaultPermissionTitlesBundle()
 
         permissionGroups = PermissionsHelper(this).beaconScanPermissionGroupsNeeded(backgroundAccessRequested)
 
         setContent {
-            PermWidget(message,"",continueButtonTitle);
+            PermWidget(message, "", continueButtonTitle);
         }
 
 //        val params = LinearLayout.LayoutParams(
@@ -189,41 +204,72 @@ open class BeaconScanPermissionsActivity: PermissionsActivity()  {
 
     @Composable
     fun PermWidget(message: String, buttonTitle: String, continueButtonTitle: String) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colors.background),
-                verticalArrangement = Arrangement.Center
-            ){
+//        val permissionButtonTitles = intent.getBundleExtra("permissionBundleTitles") ?: getDefaultPermissionTitlesBundle()
+        val activity = (LocalContext.current as? Activity)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colors.background),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colors.primary,
+                text = message
+            )
+                Button(onClick = {
+                    buttonClickListener();
+                }) {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colors.secondary,
+                        text = "Permitir"
+                    )
+                }
+
+
+//            Button(
+//                onClick = {
+//                    val permissionsGroup = permissionGroups.get(0);
+//                    promptForPermissions(permissionsGroup);
+//                }
+//            ) {
+//                Text(
+//                    modifier = Modifier.fillMaxWidth(),
+//                    textAlign = TextAlign.Center,
+//                    color = MaterialTheme.colors.secondary,
+//                    text = buttonTitle
+//                )
+//            }
+            Button(
+                onClick = {
+                    activity?.finish();
+                }
+            ) {
                 Text(
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colors.primary,
-                    text=message
+                    color = MaterialTheme.colors.secondary,
+                    text = continueButtonTitle
                 )
-                Button(onClick = { /*TODO*/ }) {
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colors.primary,
-                        text=buttonTitle
-                    )
-                }
-                Button(onClick = { /*TODO*/ }) {
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colors.primary,
-                        text=continueButtonTitle
-                    )
-                }
             }
+        }
     }
 
     fun dp(value: Int): Int {
         return (value * scale + 0.5f).toInt()
     }
 
+    fun buttonClickListener() {
+        val backgroundAccessRequested = intent.getBooleanExtra("backgroundAccessRequested", true);
+        permissionGroups = PermissionsHelper(this).beaconScanPermissionGroupsNeeded(backgroundAccessRequested);
+        for ((i,el) in permissionGroups.withIndex()) {
+            val permissionsGroup = permissionGroups.get(i)
+            promptForPermissions(permissionsGroup)
+        }
+    }
 //    val buttonClickListener = View.OnClickListener { button ->
 //        val permissionsGroup = permissionGroups.get(button.id)
 //        promptForPermissions(permissionsGroup)
@@ -277,11 +323,10 @@ open class BeaconScanPermissionsActivity: PermissionsActivity()  {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 showRationale = shouldShowRequestPermissionRationale(firstPermission)
             }
-            if (showRationale ||  PermissionsHelper(this).isFirstTimeAskingPermission(firstPermission)) {
+            if (showRationale || PermissionsHelper(this).isFirstTimeAskingPermission(firstPermission)) {
                 PermissionsHelper(this).setFirstTimeAskingPermission(firstPermission, false)
                 requestPermissionsLauncher.launch(permissionsGroup)
-            }
-            else {
+            } else {
                 val builder = AlertDialog.Builder(this)
                 builder.setTitle("Can't request permission")
                 builder.setMessage("This permission has been previously denied to this app.  In order to grant it now, you must go to Android Settings to enable this permission.")
@@ -290,6 +335,7 @@ open class BeaconScanPermissionsActivity: PermissionsActivity()  {
             }
         }
     }
+
     fun allPermissionsGranted(permissionsGroup: Array<String>): Boolean {
         val permissionsHelper = PermissionsHelper(this)
         for (permission in permissionsGroup) {
@@ -304,7 +350,8 @@ open class BeaconScanPermissionsActivity: PermissionsActivity()  {
         const val TAG = "BeaconScanPermissionActivity"
         fun allPermissionsGranted(context: Context, backgroundAccessRequested: Boolean): Boolean {
             val permissionsHelper = PermissionsHelper(context)
-            val permissionsGroups = permissionsHelper.beaconScanPermissionGroupsNeeded(backgroundAccessRequested)
+            val permissionsGroups =
+                permissionsHelper.beaconScanPermissionGroupsNeeded(backgroundAccessRequested)
             for (permissionsGroup in permissionsGroups) {
                 for (permission in permissionsGroup) {
                     if (!permissionsHelper.isPermissionGranted(permission)) {
