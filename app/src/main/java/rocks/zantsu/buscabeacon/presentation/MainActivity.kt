@@ -35,7 +35,7 @@ const val TAG: String = "MainAPP"
 class MainActivity : ComponentActivity() {
     private val calorText = mutableStateOf("Buscando");
     private val lastReading = mutableStateOf(50.0);
-    private val numOfReadings = mutableStateOf(10);
+    private val numOfReadings = mutableStateOf(0);
     private val lastTendence = mutableStateOf("");
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -107,22 +107,25 @@ class MainActivity : ComponentActivity() {
         for (beacon: Beacon in beacons) {
             Log.d(TAG, "$beacon about ${beacon.distance} meters away");
             var tendencia = lastTendence.value;
-            if(numOfReadings.value > 5){
-                lastReading.value = beacon.distance;
-                if(lastReading.value > beacon.distance) tendencia = "Esfriando"
+            if(numOfReadings.value > 2){
+                if(lastReading.value < beacon.distance) tendencia = "Esfriando"
                 else tendencia = "Esquentando";
+
+                lastReading.value = beacon.distance;
+
                 lastTendence.value = tendencia;
+
                 numOfReadings.value = 0;
             }
 //            "🥵🤯🙂🥶"
             var emoji = "\uD83E\uDD76"; //Emoji gelado.
-            if(beacon.distance < 5){
+            if(beacon.distance < 2){
                 emoji = "\uD83D\uDE42" //Emoji Feliz
             }
-            if(beacon.distance < 3){
+            if(beacon.distance < 1){
                 emoji = "\uD83E\uDD75" //Emoji com Calor
             }
-            if(beacon.distance < 1){
+            if(beacon.distance < 0.12){
                 emoji = "\uD83E\uDD2F" //Emoji Explodindo
             }
             calorText.value = "${tendencia}\n${emoji}\n${beacon.distance}m";
